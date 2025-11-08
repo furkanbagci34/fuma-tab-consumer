@@ -1,0 +1,57 @@
+version: "3.8"
+
+services:
+    fuma-tab-consumer:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        container_name: fuma-tab-consumer
+        restart: unless-stopped
+        environment:
+            - NODE_ENV=production
+            - LOG_LEVEL=info
+            - RABBITMQ_URL=amqp://rabbitmq:5672
+            - RABBITMQ_QUEUE=customer-registration-queue
+            - RABBITMQ_EXCHANGE=fuma-tab-exchange
+            - RABBITMQ_ROUTING_KEY=customer.registration
+            - RABBITMQ_PREFETCH_COUNT=1
+            - PIQSOFT_BASE_URL=https://api.piqsoft.com
+            - PIQSOFT_API_KEY=${PIQSOFT_API_KEY}
+            - PIQSOFT_TIMEOUT=30000
+            - PIQSOFT_RETRY_ATTEMPTS=3
+            - PIQSOFT_RETRY_DELAY=2000
+        volumes:
+            - ./logs:/app/logs
+        depends_on:
+            - rabbitmq
+        networks:
+            - fuma-network
+
+    rabbitmq:
+        image: rabbitmq:3.12-management-alpine
+        container_name: fuma-rabbitmq
+        restart: unless-stopped
+        ports:
+            - "5672:5672"
+            - "15672:15672"
+        environment:
+            - RABBITMQ_DEFAULT_USER=admin
+            - RABBITMQ_DEFAULT_PASS=admin123
+        volumes:
+            - rabbitmq_data:/var/lib/rabbitmq
+            - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+        networks:
+            - fuma-network
+        healthcheck:
+            test: rabbitmq-diagnostics -q ping
+            interval: 30s
+            timeout: 30s
+            retries: 3
+
+volumes:
+    rabbitmq_data:
+        driver: local
+
+networks:
+    fuma-network:
+        driver: bridge
