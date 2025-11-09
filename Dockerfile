@@ -45,17 +45,6 @@ RUN npm install --only=production
 # Derlenmiş kodu development aşamasından kopyalıyoruz.
 COPY --from=development /usr/src/app/dist ./dist
 
-# apply-migrations.js betiğini kopyalıyoruz (eğer build sürecinde kopyalanmadıysa).
-# Genellikle bu betik src veya scripts gibi bir klasörde olur ve build ile dist'e kopyalanır.
-# Eğer betik kök dizindeyse ve build ile kopyalanmıyorsa bu satırı aktif edin:
-COPY apply-migrations.js ./
-COPY migrations ./migrations/
-
-# Uygulama başlamadan önce migration'ları çalıştırıyoruz.
-# apply-migrations.js dosyasının çalıştırılabilir olduğundan ve doğru Node.js yolunu kullandığından emin olun.
-# Eğer betiğiniz `dist` klasörü içindeyse yolu ona göre güncelleyin, örneğin: CMD node dist/apply-migrations.js
-# Ya da package.json'daki script'i kullanabilirsiniz:
-RUN npm run migrations
 
 # Uygulamanın çalışacağı portu açıyoruz.
 EXPOSE ${PORT}
