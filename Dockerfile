@@ -1,41 +1,64 @@
-# Multi-stage build for production optimization
-FROM node:18-alpine AS builder
+# ARM64 mimarisi için Node.js'in Alpine tabanlı bir sürümünü kullanıyoruz.
+# Projenizin Node.js sürümüne göre bu etiketi güncelleyebilirsiniz (örn: node:18-alpine-arm64v8, node:20-alpine-arm64v8).
+# En güncel LTS sürümünü kullanmak genellikle iyi bir pratiktir.
+FROM node:20-alpine AS development
 
-# Set working directory
-WORKDIR /app
+# Çalışma dizinini ayarlıyoruz.
+WORKDIR /usr/src/app
 
-# Copy package files
+# package.json ve package-lock.json (veya yarn.lock) dosyalarını kopyalıyoruz.
+# Bu, bağımlılık katmanının önbelleğe alınmasını sağlar.
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+# Bağımlılıkları yüklüyoruz.
+# Eğer yarn kullanıyorsanız, RUN yarn install --frozen-lockfile komutunu kullanın.
+RUN npm install
 
-# Copy source code
+# Proje kaynak kodunu kopyalıyoruz.
 COPY . .
 
-# Build the application
+# TypeScript kodunu JavaScript'e derliyoruz.
 RUN npm run build
 
-# Production stage
-FROM node:18-alpine AS production
+# Production imajını oluşturuyoruz.
+FROM node:20-alpine AS production
 
-# Create app directory
-WORKDIR /app
+# Build sırasında kullanılacak argümanı tanımlıyoruz
+ARG SQL_CONNECTION_STRING
 
-# Create non-root user for security
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nestjs -u 1001
+# Gerekli ortam değişkenlerini ayarlıyoruz.
+# Coolify genellikle portu kendi yönetir, ancak varsayılan bir değer sağlamak iyidir.
+ENV NODE_ENV=production
+ENV PORT=3000
+# Build argümanını environment variable olarak set ediyoruz ki RUN komutları erişebilsin
+ENV SQL_CONNECTION_STRING=${SQL_CONNECTION_STRING}
 
-# Copy built application and dependencies
-COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
-COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=nestjs:nodejs /app/package*.json ./
+WORKDIR /usr/src/app
 
-# Create logs directory
-RUN mkdir -p logs && chown -R nestjs:nodejs logs
+# Sadece production bağımlılıklarını ve build edilmiş dosyaları kopyalıyoruz.
+COPY package*.json ./
 
-# Switch to non-root user
-USER nestjs
+# Sadece production bağımlılıklarını yüklüyoruz.
+# Eğer yarn kullanıyorsanız, RUN yarn install --frozen-lockfile --production komutunu kullanın.
+RUN npm install --only=production
 
-# Start the application
+# Derlenmiş kodu development aşamasından kopyalıyoruz.
+COPY --from=development /usr/src/app/dist ./dist
+
+# apply-migrations.js betiğini kopyalıyoruz (eğer build sürecinde kopyalanmadıysa).
+# Genellikle bu betik src veya scripts gibi bir klasörde olur ve build ile dist'e kopyalanır.
+# Eğer betik kök dizindeyse ve build ile kopyalanmıyorsa bu satırı aktif edin:
+COPY apply-migrations.js ./
+COPY migrations ./migrations/
+
+# Uygulama başlamadan önce migration'ları çalıştırıyoruz.
+# apply-migrations.js dosyasının çalıştırılabilir olduğundan ve doğru Node.js yolunu kullandığından emin olun.
+# Eğer betiğiniz `dist` klasörü içindeyse yolu ona göre güncelleyin, örneğin: CMD node dist/apply-migrations.js
+# Ya da package.json'daki script'i kullanabilirsiniz:
+RUN npm run migrations
+
+# Uygulamanın çalışacağı portu açıyoruz.
+EXPOSE ${PORT}
+
+# Uygulamayı başlatıyoruz.
 CMD ["node", "dist/main.js"]
