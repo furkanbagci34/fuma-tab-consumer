@@ -8,7 +8,8 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install ALL dependencies (including devDependencies for build)
-RUN npm ci && npm cache clean --force
+# Unset NODE_ENV to ensure devDependencies are installed
+RUN NODE_ENV=development npm ci && npm cache clean --force
 
 # Copy source code
 COPY . .
