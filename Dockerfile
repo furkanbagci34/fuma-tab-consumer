@@ -39,6 +39,8 @@ COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 # Create logs directory and change ownership
 RUN mkdir -p logs && chown -R nestjs:nodejs /app
 
+# Set NODE_ENV to production
+ENV NODE_ENV=production
 # Switch to non-root user
 USER nestjs
 
