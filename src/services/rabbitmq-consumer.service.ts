@@ -138,7 +138,21 @@ export class RabbitMQConsumerService implements OnModuleInit, OnModuleDestroy {
                 queue,
                 (message: ConsumeMessage | null) => {
                     if (message) {
-                        this.handleMessage(message, channel);
+                        // Handle message asynchronously and catch any unhandled errors
+                        this.handleMessage(message, channel).catch((error) => {
+                            logger.error("Unhandled error in handleMessage", {
+                                error: error instanceof Error ? error.message : String(error),
+                                stack: error instanceof Error ? error.stack : undefined,
+                            });
+                            // Nack the message to prevent it from being lost
+                            try {
+                                channel.nack(message, false, false);
+                            } catch (nackError) {
+                                logger.error("Failed to nack message after error", {
+                                    error: nackError instanceof Error ? nackError.message : String(nackError),
+                                });
+                            }
+                        });
                     } else {
                         logger.warn("Received null message from queue");
                     }
@@ -168,9 +182,32 @@ export class RabbitMQConsumerService implements OnModuleInit, OnModuleDestroy {
                 messageId,
                 retryCount,
                 queue,
+                messageLength: rawContent.length,
             });
 
-            const parsedContent = JSON.parse(rawContent);
+            // Log raw content for debugging (first 500 chars to avoid huge logs)
+            if (rawContent.length > 0) {
+                logger.debug("Message content preview", {
+                    messageId,
+                    preview: rawContent.substring(0, 500),
+                });
+            }
+
+            let parsedContent: any;
+            try {
+                parsedContent = JSON.parse(rawContent);
+            } catch (parseError) {
+                logger.error("Failed to parse message as JSON", {
+                    messageId,
+                    retryCount,
+                    error: parseError instanceof Error ? parseError.message : String(parseError),
+                    rawContent: rawContent.substring(0, 500), // Log first 500 chars for debugging
+                });
+                // Re-throw as a more descriptive error
+                throw new Error(
+                    `Invalid JSON format: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
+                );
+            }
 
             await this.registrationService.processMessage({ ...parsedContent, messageId }, retryCount);
 
@@ -187,15 +224,17 @@ export class RabbitMQConsumerService implements OnModuleInit, OnModuleDestroy {
 
     private async handleMessageError(
         message: ConsumeMessage,
-        error: Error,
+        error: Error | unknown,
         messageId: string,
         channel: ConfirmChannel,
         retryCount: number,
     ): Promise<void> {
+        const errorMessage = error instanceof Error ? error.message : String(error);
         logger.error("Message processing failed", {
             messageId,
             retryCount,
-            error: error.message,
+            error: errorMessage,
+            stack: error instanceof Error ? error.stack : undefined,
         });
 
         const maxRetryCount = parseInt(process.env.MAX_RETRY_COUNT || "3", 10);
@@ -205,7 +244,13 @@ export class RabbitMQConsumerService implements OnModuleInit, OnModuleDestroy {
                 retryCount,
                 maxRetries: maxRetryCount,
             });
-        } else {
+            // Reject message permanently
+            channel.nack(message, false, false);
+            return;
+        }
+
+        // Try to retry the message
+        try {
             logger.info("Retrying message with incremented retryCount", {
                 messageId,
                 retryCount: retryCount + 1,
@@ -213,11 +258,35 @@ export class RabbitMQConsumerService implements OnModuleInit, OnModuleDestroy {
             });
 
             const rawContent = message.content.toString();
-            const parsedContent = JSON.parse(rawContent);
+            let parsedContent: any;
 
+            try {
+                parsedContent = JSON.parse(rawContent);
+            } catch (parseError) {
+                logger.error("Failed to parse message for retry - message will be rejected", {
+                    messageId,
+                    retryCount,
+                    parseError: parseError instanceof Error ? parseError.message : String(parseError),
+                });
+                // If we can't parse, reject the message
+                channel.nack(message, false, false);
+                return;
+            }
+
+            // Publish retry message
             await this.publishMessage(parsedContent, messageId, retryCount + 1);
+            // Nack original message (don't requeue, we've published a new one)
+            channel.nack(message, false, false);
+        } catch (retryError) {
+            logger.error("Failed to retry message - message will be rejected", {
+                messageId,
+                retryCount,
+                error: retryError instanceof Error ? retryError.message : String(retryError),
+                stack: retryError instanceof Error ? retryError.stack : undefined,
+            });
+            // If retry fails, reject the message
+            channel.nack(message, false, false);
         }
-        channel.nack(message, false, false);
     }
 
     private async disconnect(): Promise<void> {
