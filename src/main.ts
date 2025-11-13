@@ -8,6 +8,11 @@ import { logger } from "./common/logger";
  */
 async function bootstrap(): Promise<void> {
     try {
+        logger.info("Starting Fuma Tab Consumer application...", {
+            environment: process.env.NODE_ENV || "development",
+            timestamp: new Date().toISOString(),
+        });
+
         // Create NestJS application context (no HTTP server)
         const app = await NestFactory.createApplicationContext(AppModule, {
             logger: ["error", "warn", "log", "debug", "verbose"],
@@ -45,10 +50,14 @@ async function bootstrap(): Promise<void> {
         ); // Check every hour
     } catch (error) {
         logger.error("Failed to start application", {
-            error: error.message,
-            stack: error.stack,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            name: error instanceof Error ? error.name : undefined,
         });
-        process.exit(1);
+        // Wait a bit before exiting to ensure logs are written
+        setTimeout(() => {
+            process.exit(1);
+        }, 1000);
     }
 }
 
