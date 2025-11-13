@@ -14,27 +14,13 @@ export class RabbitMQConsumerService implements OnModuleInit, OnModuleDestroy {
 
     async onModuleInit(): Promise<void> {
         try {
-            logger.info("Initializing RabbitMQ Consumer Service...");
-            // Use Promise.race to add timeout to connection
-            const connectionPromise = this.connect();
-            const timeoutPromise = new Promise((_, reject) => {
-                setTimeout(() => {
-                    reject(new Error("RabbitMQ connection timeout after 30 seconds"));
-                }, 30000);
-            });
-
-            await Promise.race([connectionPromise, timeoutPromise]);
+            await this.connect();
             logger.info("RabbitMQ Consumer Service initialized successfully");
         } catch (error) {
             logger.error("Failed to initialize RabbitMQ Consumer Service", {
-                error: error instanceof Error ? error.message : String(error),
-                stack: error instanceof Error ? error.stack : undefined,
+                error: error.message,
             });
-            logger.warn(
-                "Service will continue running without RabbitMQ connection. Will retry connection in background.",
-            );
-            // Don't throw - let the app continue running
-            // The connection manager will keep trying to reconnect in the background
+            logger.warn("Service will continue running without RabbitMQ connection");
         }
     }
 
@@ -88,22 +74,10 @@ export class RabbitMQConsumerService implements OnModuleInit, OnModuleDestroy {
                 logger.warn("RabbitMQ channel closed");
             });
 
-            // Wait for connection with timeout
-            const connectPromise = this.channelWrapper.waitForConnect();
-            const timeoutPromise = new Promise((_, reject) => {
-                setTimeout(() => {
-                    reject(new Error("Channel connection timeout after 20 seconds"));
-                }, 20000);
-            });
-
-            await Promise.race([connectPromise, timeoutPromise]);
+            await this.channelWrapper.waitForConnect();
             logger.info("RabbitMQ channel is ready");
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            logger.error("Failed to connect to RabbitMQ", {
-                error: errorMessage,
-                stack: error instanceof Error ? error.stack : undefined,
-            });
+            logger.error("Failed to connect to RabbitMQ", error.message);
             throw error;
         }
     }
