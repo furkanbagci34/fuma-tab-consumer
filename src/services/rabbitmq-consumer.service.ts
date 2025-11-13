@@ -1,12 +1,12 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from "@nestjs/common";
+import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from "@nestjs/common";
 import * as amqpConnectionManager from "amqp-connection-manager";
 import { ChannelWrapper } from "amqp-connection-manager";
 import { ConfirmChannel, ConsumeMessage } from "amqplib";
 import { RegistrationService } from "./registration.service";
-import { logger } from "../common/logger";
 
 @Injectable()
 export class RabbitMQConsumerService implements OnModuleInit, OnModuleDestroy {
+    private readonly logger = new Logger(RabbitMQConsumerService.name);
     private connection: amqpConnectionManager.AmqpConnectionManager | null = null;
     private channelWrapper: ChannelWrapper | null = null;
 
@@ -15,18 +15,16 @@ export class RabbitMQConsumerService implements OnModuleInit, OnModuleDestroy {
     async onModuleInit(): Promise<void> {
         try {
             await this.connect();
-            logger.info("RabbitMQ Consumer Service initialized successfully");
+            this.logger.log("RabbitMQ Consumer Service initialized successfully");
         } catch (error) {
-            logger.error("Failed to initialize RabbitMQ Consumer Service", {
-                error: error.message,
-            });
-            logger.warn("Service will continue running without RabbitMQ connection");
+            this.logger.error(`Failed to initialize RabbitMQ Consumer Service - error: ${error.message}`);
+            this.logger.warn("Service will continue running without RabbitMQ connection");
         }
     }
 
     async onModuleDestroy(): Promise<void> {
         await this.disconnect();
-        logger.info("RabbitMQ Consumer Service destroyed");
+        this.logger.log("RabbitMQ Consumer Service destroyed");
     }
 
     private async connect(): Promise<void> {
@@ -34,9 +32,7 @@ export class RabbitMQConsumerService implements OnModuleInit, OnModuleDestroy {
             const rabbitmqUrl =
                 process.env.RABBITMQ_URL ||
                 "amqp://1gawz7H9ApwrYNSo:nNlnv8kNT37ESJvJVQy8Ifb3tWblDLKy@rabbitmq.fumagpt.com:5672";
-            logger.info("Connecting to RabbitMQ...", {
-                url: rabbitmqUrl.replace(/\/\/.*@/, "//***:***@"),
-            });
+            this.logger.log(`Connecting to RabbitMQ... - url: ${rabbitmqUrl.replace(/\/\/.*@/, "//***:***@")}`);
 
             this.connection = amqpConnectionManager.connect([rabbitmqUrl], {
                 heartbeatIntervalInSeconds: 30,
@@ -44,15 +40,15 @@ export class RabbitMQConsumerService implements OnModuleInit, OnModuleDestroy {
             });
 
             this.connection.on("connect", () => {
-                logger.info("Successfully connected to RabbitMQ");
+                this.logger.log("Successfully connected to RabbitMQ");
             });
 
             this.connection.on("connectFailed", (error) => {
-                logger.error("RabbitMQ connection failed", error.err?.message || "Unknown error");
+                this.logger.error(`RabbitMQ connection failed - ${error.err?.message || "Unknown error"}`);
             });
 
             this.connection.on("disconnect", (error) => {
-                logger.warn("RabbitMQ connection disconnected", error.err?.message || "Connection lost");
+                this.logger.warn(`RabbitMQ connection disconnected - ${error.err?.message || "Connection lost"}`);
             });
 
             this.channelWrapper = this.connection.createChannel({
@@ -63,21 +59,21 @@ export class RabbitMQConsumerService implements OnModuleInit, OnModuleDestroy {
             });
 
             this.channelWrapper.on("connect", () => {
-                logger.info("RabbitMQ channel connected");
+                this.logger.log("RabbitMQ channel connected");
             });
 
             this.channelWrapper.on("error", (error) => {
-                logger.error("RabbitMQ channel error", error.message);
+                this.logger.error(`RabbitMQ channel error - ${error.message}`);
             });
 
             this.channelWrapper.on("close", () => {
-                logger.warn("RabbitMQ channel closed");
+                this.logger.warn("RabbitMQ channel closed");
             });
 
             await this.channelWrapper.waitForConnect();
-            logger.info("RabbitMQ channel is ready");
+            this.logger.log("RabbitMQ channel is ready");
         } catch (error) {
-            logger.error("Failed to connect to RabbitMQ", error.message);
+            this.logger.error(`Failed to connect to RabbitMQ - ${error.message}`);
             throw error;
         }
     }
@@ -101,12 +97,9 @@ export class RabbitMQConsumerService implements OnModuleInit, OnModuleDestroy {
 
             await channel.prefetch(prefetchCount);
 
-            logger.info("RabbitMQ queue setup completed", {
-                exchange,
-                queue,
-                routingKey,
-                prefetchCount,
-            });
+            this.logger.log(
+                `RabbitMQ queue setup completed - exchange: ${exchange}, queue: ${queue}, routingKey: ${routingKey}, prefetchCount: ${prefetchCount}`,
+            );
 
             await channel.consume(
                 queue,
@@ -114,7 +107,7 @@ export class RabbitMQConsumerService implements OnModuleInit, OnModuleDestroy {
                     if (message) {
                         this.handleMessage(message, channel);
                     } else {
-                        logger.warn("Received null message from queue");
+                        this.logger.warn("Received null message from queue");
                     }
                 },
                 {
@@ -122,11 +115,9 @@ export class RabbitMQConsumerService implements OnModuleInit, OnModuleDestroy {
                 },
             );
 
-            logger.info("Started consuming messages from queue", {
-                queue,
-            });
+            this.logger.log(`Started consuming messages from queue - queue: ${queue}`);
         } catch (error) {
-            logger.error("Failed to setup RabbitMQ channel", error.message);
+            this.logger.error(`Failed to setup RabbitMQ channel - ${error.message}`);
             throw error;
         }
     }
@@ -138,11 +129,9 @@ export class RabbitMQConsumerService implements OnModuleInit, OnModuleDestroy {
 
         try {
             const queue = process.env.RABBITMQ_QUEUE || "tab-integration-queue";
-            logger.info("Raw message received from queue", {
-                messageId,
-                retryCount,
-                queue,
-            });
+            this.logger.log(
+                `Raw message received from queue - messageId: ${messageId}, retryCount: ${retryCount}, queue: ${queue}`,
+            );
 
             const parsedContent = JSON.parse(rawContent);
 
@@ -150,10 +139,7 @@ export class RabbitMQConsumerService implements OnModuleInit, OnModuleDestroy {
 
             channel.ack(message);
 
-            logger.debug("Message processed successfully", {
-                messageId,
-                retryCount,
-            });
+            this.logger.debug(`Message processed successfully - messageId: ${messageId}, retryCount: ${retryCount}`);
         } catch (error) {
             await this.handleMessageError(message, error, messageId, channel, retryCount);
         }
@@ -166,25 +152,19 @@ export class RabbitMQConsumerService implements OnModuleInit, OnModuleDestroy {
         channel: ConfirmChannel,
         retryCount: number,
     ): Promise<void> {
-        logger.error("Message processing failed", {
-            messageId,
-            retryCount,
-            error: error.message,
-        });
+        this.logger.error(
+            `Message processing failed - messageId: ${messageId}, retryCount: ${retryCount}, error: ${error.message}`,
+        );
 
         const maxRetryCount = parseInt(process.env.MAX_RETRY_COUNT || "3", 10);
         if (retryCount >= maxRetryCount) {
-            logger.error("Max retry attempts reached, message will be rejected", {
-                messageId,
-                retryCount,
-                maxRetries: maxRetryCount,
-            });
+            this.logger.error(
+                `Max retry attempts reached, message will be rejected - messageId: ${messageId}, retryCount: ${retryCount}, maxRetries: ${maxRetryCount}`,
+            );
         } else {
-            logger.info("Retrying message with incremented retryCount", {
-                messageId,
-                retryCount: retryCount + 1,
-                maxRetries: maxRetryCount,
-            });
+            this.logger.log(
+                `Retrying message with incremented retryCount - messageId: ${messageId}, retryCount: ${retryCount + 1}, maxRetries: ${maxRetryCount}`,
+            );
 
             const rawContent = message.content.toString();
             const parsedContent = JSON.parse(rawContent);
@@ -202,9 +182,9 @@ export class RabbitMQConsumerService implements OnModuleInit, OnModuleDestroy {
             if (this.connection) {
                 await this.connection.close();
             }
-            logger.info("Disconnected from RabbitMQ");
+            this.logger.log("Disconnected from RabbitMQ");
         } catch (error) {
-            logger.error("Error during RabbitMQ disconnection", error.message);
+            this.logger.error(`Error during RabbitMQ disconnection - ${error.message}`);
         }
     }
 
@@ -231,16 +211,13 @@ export class RabbitMQConsumerService implements OnModuleInit, OnModuleDestroy {
                 },
             });
 
-            logger.info("Message published to queue for retry", {
-                messageId,
-                retryCount,
-            });
+            this.logger.log(
+                `Message published to queue for retry - messageId: ${messageId}, retryCount: ${retryCount}`,
+            );
         } catch (error) {
-            logger.error("Failed to publish retry message", {
-                messageId,
-                retryCount,
-                error: error.message,
-            });
+            this.logger.error(
+                `Failed to publish retry message - messageId: ${messageId}, retryCount: ${retryCount}, error: ${error.message}`,
+            );
             throw error;
         }
     }

@@ -1,9 +1,10 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { PiqSoftApiService } from "./piqsoft-api.service";
-import { logger } from "../common/logger";
 
 @Injectable()
 export class RegistrationService {
+    private readonly logger = new Logger(RegistrationService.name);
+
     constructor(private readonly piqsoftApiService: PiqSoftApiService) {}
 
     async processMessage(consumerData: any, retryCount: number = 0): Promise<void> {
@@ -24,10 +25,9 @@ export class RegistrationService {
                 }
             }
         } catch (error) {
-            logger.error("Failed to process message", {
-                error: error.message,
-                messageType: consumerData?.eventType,
-            });
+            this.logger.error(
+                `Failed to process message - error: ${error.message}, messageType: ${consumerData?.eventType}`,
+            );
             throw error;
         }
     }

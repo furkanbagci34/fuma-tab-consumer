@@ -1,10 +1,11 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import axios from "axios";
-import { logger } from "../common/logger";
 import { DbService } from "./db.service";
 
 @Injectable()
 export class PiqSoftApiService {
+    private readonly logger = new Logger(PiqSoftApiService.name);
+
     constructor(private readonly dbService: DbService) {}
 
     async upsertCustomer(customerData: any, messageId: string, retryCount: number = 0): Promise<void> {
@@ -14,10 +15,9 @@ export class PiqSoftApiService {
         try {
             const sellerId = customerData.seller_id;
             if (!sellerId) {
-                logger.error("seller_id is missing in customer data", {
-                    guid: customerData.guid,
-                    messageId,
-                });
+                this.logger.error(
+                    `seller_id is missing in customer data - guid: ${customerData.guid}, messageId: ${messageId}`,
+                );
 
                 errorMessage = "seller_id is required in customer data";
                 throw new Error(errorMessage);
@@ -25,11 +25,9 @@ export class PiqSoftApiService {
 
             const rows = await this.dbService.fetchSellerRowById(sellerId);
             if (!rows || rows.length === 0) {
-                logger.error("Seller not found or inactive", {
-                    sellerId,
-                    guid: customerData.guid,
-                    messageId,
-                });
+                this.logger.error(
+                    `Seller not found or inactive - sellerId: ${sellerId}, guid: ${customerData.guid}, messageId: ${messageId}`,
+                );
                 errorMessage = `Seller with id ${sellerId} not found or inactive`;
                 throw new Error(errorMessage);
             }
@@ -37,17 +35,14 @@ export class PiqSoftApiService {
             const seller = rows[0];
             let host = seller.ip_address;
 
-            logger.info("Building URL for customer upsert", {
-                sellerId,
-                originalIpAddress: seller.ip_address,
-                originalPort: seller.port,
-                messageId,
-            });
+            this.logger.log(
+                `Building URL for customer upsert - sellerId: ${sellerId}, originalIpAddress: ${seller.ip_address}, originalPort: ${seller.port}, messageId: ${messageId}`,
+            );
 
             // Protokol kontrolü: Eğer http:// veya https:// yoksa, varsayılan olarak http:// ekle
             if (!host.startsWith("http://") && !host.startsWith("https://")) {
                 host = `http://${host}`;
-                logger.info("Protocol added to host", { originalHost: seller.ip_address, newHost: host });
+                this.logger.log(`Protocol added to host - originalHost: ${seller.ip_address}, newHost: ${host}`);
             }
 
             // Port kontrolü: Varsayılan portları (80, 443) atla
@@ -59,23 +54,18 @@ export class PiqSoftApiService {
                 if ((isHttps && seller.port !== 443) || (isHttp && seller.port !== 80)) {
                     port = `:${seller.port}`;
                 } else {
-                    logger.info("Default port skipped", {
-                        protocol: isHttps ? "https" : "http",
-                        port: seller.port,
-                    });
+                    this.logger.log(
+                        `Default port skipped - protocol: ${isHttps ? "https" : "http"}, port: ${seller.port}`,
+                    );
                 }
             }
 
             const baseUrl = `${host}${port}`;
             url = `${baseUrl}/api/fuma/customer/upsert`;
 
-            logger.info("Making API request", {
-                url,
-                sellerId,
-                messageId,
-                retryCount,
-                hasApiKey: !!seller.api_key,
-            });
+            this.logger.log(
+                `Making API request - url: ${url}, sellerId: ${sellerId}, messageId: ${messageId}, retryCount: ${retryCount}, hasApiKey: ${!!seller.api_key}`,
+            );
 
             const response = await axios.post(url, customerData, {
                 headers: {
@@ -97,15 +87,9 @@ export class PiqSoftApiService {
 
             errorMessage = JSON.stringify(errorDetails);
 
-            logger.error("Customer upsert failed with detailed error", {
-                sellerId: customerData.seller_id,
-                guid: customerData.guid,
-                error: errorDetails.statusCode,
-                errorMessage: errorDetails.message,
-                messageId,
-                retryCount,
-                url: url || "URL not available",
-            });
+            this.logger.error(
+                `Customer upsert failed with detailed error - sellerId: ${customerData.seller_id}, guid: ${customerData.guid}, error: ${errorDetails.statusCode}, errorMessage: ${errorDetails.message}, messageId: ${messageId}, retryCount: ${retryCount}, url: ${url || "URL not available"}`,
+            );
 
             throw error;
         } finally {
@@ -126,10 +110,9 @@ export class PiqSoftApiService {
         try {
             const sellerId = docOffersData.seller_id;
             if (!sellerId) {
-                logger.error("seller_id is missing in doc offers data", {
-                    guid: docOffersData.guid,
-                    messageId,
-                });
+                this.logger.error(
+                    `seller_id is missing in doc offers data - guid: ${docOffersData.guid}, messageId: ${messageId}`,
+                );
 
                 errorMessage = "seller_id is required in doc offers data";
                 throw new Error(errorMessage);
@@ -137,11 +120,9 @@ export class PiqSoftApiService {
 
             const rows = await this.dbService.fetchSellerRowById(sellerId);
             if (!rows || rows.length === 0) {
-                logger.error("Seller not found or inactive", {
-                    sellerId,
-                    guid: docOffersData.guid,
-                    messageId,
-                });
+                this.logger.error(
+                    `Seller not found or inactive - sellerId: ${sellerId}, guid: ${docOffersData.guid}, messageId: ${messageId}`,
+                );
                 errorMessage = `Seller with id ${sellerId} not found or inactive`;
                 throw new Error(errorMessage);
             }
@@ -149,17 +130,14 @@ export class PiqSoftApiService {
             const seller = rows[0];
             let host = seller.ip_address;
 
-            logger.info("Building URL for doc offers upsert", {
-                sellerId,
-                originalIpAddress: seller.ip_address,
-                originalPort: seller.port,
-                messageId,
-            });
+            this.logger.log(
+                `Building URL for doc offers upsert - sellerId: ${sellerId}, originalIpAddress: ${seller.ip_address}, originalPort: ${seller.port}, messageId: ${messageId}`,
+            );
 
             // Protokol kontrolü: Eğer http:// veya https:// yoksa, varsayılan olarak http:// ekle
             if (!host.startsWith("http://") && !host.startsWith("https://")) {
                 host = `http://${host}`;
-                logger.info("Protocol added to host", { originalHost: seller.ip_address, newHost: host });
+                this.logger.log(`Protocol added to host - originalHost: ${seller.ip_address}, newHost: ${host}`);
             }
 
             // Port kontrolü: Varsayılan portları (80, 443) atla
@@ -171,23 +149,18 @@ export class PiqSoftApiService {
                 if ((isHttps && seller.port !== 443) || (isHttp && seller.port !== 80)) {
                     port = `:${seller.port}`;
                 } else {
-                    logger.info("Default port skipped", {
-                        protocol: isHttps ? "https" : "http",
-                        port: seller.port,
-                    });
+                    this.logger.log(
+                        `Default port skipped - protocol: ${isHttps ? "https" : "http"}, port: ${seller.port}`,
+                    );
                 }
             }
 
             const baseUrl = `${host}${port}`;
             url = `${baseUrl}/api/fuma/doc-orders/upsert`;
 
-            logger.info("Making API request", {
-                url,
-                sellerId,
-                messageId,
-                retryCount,
-                hasApiKey: !!seller.api_key,
-            });
+            this.logger.log(
+                `Making API request - url: ${url}, sellerId: ${sellerId}, messageId: ${messageId}, retryCount: ${retryCount}, hasApiKey: ${!!seller.api_key}`,
+            );
 
             const response = await axios.post(url, docOffersData, {
                 headers: {
@@ -209,15 +182,9 @@ export class PiqSoftApiService {
 
             errorMessage = JSON.stringify(errorDetails);
 
-            logger.error("Doc offers upsert failed with detailed error", {
-                sellerId: docOffersData.seller_id,
-                guid: docOffersData.guid,
-                error: errorDetails.statusCode,
-                errorMessage: errorDetails.message,
-                messageId,
-                retryCount,
-                url: url || "URL not available",
-            });
+            this.logger.error(
+                `Doc offers upsert failed with detailed error - sellerId: ${docOffersData.seller_id}, guid: ${docOffersData.guid}, error: ${errorDetails.statusCode}, errorMessage: ${errorDetails.message}, messageId: ${messageId}, retryCount: ${retryCount}, url: ${url || "URL not available"}`,
+            );
 
             throw error;
         } finally {

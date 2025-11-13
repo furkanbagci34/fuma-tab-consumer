@@ -1,7 +1,9 @@
 import "dotenv/config";
 import { NestFactory } from "@nestjs/core";
+import { Logger } from "@nestjs/common";
 import { AppModule } from "./app.module";
-import { logger } from "./common/logger";
+
+const logger = new Logger("Bootstrap");
 
 /**
  * Bootstrap the Fuma Tab Consumer application
@@ -18,20 +20,19 @@ async function bootstrap(): Promise<void> {
         // Enable graceful shutdown
         app.enableShutdownHooks();
 
-        logger.info("Fuma Tab Consumer application started successfully", {
-            environment,
-            timestamp: new Date().toISOString(),
-        });
+        logger.log(
+            `Fuma Tab Consumer application started successfully - environment: ${environment}, timestamp: ${new Date().toISOString()}`,
+        );
 
         // Handle process signals for graceful shutdown
         process.on("SIGTERM", async () => {
-            logger.info("SIGTERM received, shutting down gracefully");
+            logger.log("SIGTERM received, shutting down gracefully");
             await app.close();
             process.exit(0);
         });
 
         process.on("SIGINT", async () => {
-            logger.info("SIGINT received, shutting down gracefully");
+            logger.log("SIGINT received, shutting down gracefully");
             await app.close();
             process.exit(0);
         });
@@ -44,28 +45,19 @@ async function bootstrap(): Promise<void> {
             1000 * 60 * 60,
         ); // Check every hour
     } catch (error) {
-        logger.error("Failed to start application", {
-            error: error.message,
-            stack: error.stack,
-        });
+        logger.error(`Failed to start application - error: ${error.message}, stack: ${error.stack}`);
         process.exit(1);
     }
 }
 
 // Handle unhandled promise rejections
 process.on("unhandledRejection", (reason, promise) => {
-    logger.error("Unhandled Promise Rejection", {
-        reason,
-        promise,
-    });
+    logger.error(`Unhandled Promise Rejection - reason: ${reason}, promise: ${promise}`);
 });
 
 // Handle uncaught exceptions
 process.on("uncaughtException", (error) => {
-    logger.error("Uncaught Exception", {
-        error: error.message,
-        stack: error.stack,
-    });
+    logger.error(`Uncaught Exception - error: ${error.message}, stack: ${error.stack}`);
     process.exit(1);
 });
 
