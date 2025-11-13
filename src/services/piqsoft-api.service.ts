@@ -34,8 +34,24 @@ export class PiqSoftApiService {
             }
 
             const seller = rows[0];
-            const host = seller.ip_address;
-            const port = seller.port ? `:${seller.port}` : "";
+            let host = seller.ip_address;
+
+            // Protokol kontrolü: Eğer http:// veya https:// yoksa, varsayılan olarak http:// ekle
+            if (!host.startsWith("http://") && !host.startsWith("https://")) {
+                host = `http://${host}`;
+            }
+
+            // Port kontrolü: Varsayılan portları (80, 443) atla
+            let port = "";
+            if (seller.port) {
+                const isHttps = host.startsWith("https://");
+                const isHttp = host.startsWith("http://");
+                // HTTPS için 443, HTTP için 80 varsayılan portlardır, eklemeye gerek yok
+                if ((isHttps && seller.port !== 443) || (isHttp && seller.port !== 80)) {
+                    port = `:${seller.port}`;
+                }
+            }
+
             const baseUrl = `${host}${port}`;
             const url = `${baseUrl}/api/fuma/customer/upsert`;
 
@@ -106,8 +122,24 @@ export class PiqSoftApiService {
             }
 
             const seller = rows[0];
-            const host = seller.ip_address;
-            const port = seller.port ? `:${seller.port}` : "";
+            let host = seller.ip_address;
+
+            // Protokol kontrolü: Eğer http:// veya https:// yoksa, varsayılan olarak http:// ekle
+            if (!host.startsWith("http://") && !host.startsWith("https://")) {
+                host = `http://${host}`;
+            }
+
+            // Port kontrolü: Varsayılan portları (80, 443) atla
+            let port = "";
+            if (seller.port) {
+                const isHttps = host.startsWith("https://");
+                const isHttp = host.startsWith("http://");
+                // HTTPS için 443, HTTP için 80 varsayılan portlardır, eklemeye gerek yok
+                if ((isHttps && seller.port !== 443) || (isHttp && seller.port !== 80)) {
+                    port = `:${seller.port}`;
+                }
+            }
+
             const baseUrl = `${host}${port}`;
             const url = `${baseUrl}/api/fuma/doc-orders/upsert`;
 
