@@ -36,9 +36,17 @@ export class PiqSoftApiService {
             const seller = rows[0];
             let host = seller.ip_address;
 
+            logger.info("Building URL for customer upsert", {
+                sellerId,
+                originalIpAddress: seller.ip_address,
+                originalPort: seller.port,
+                messageId,
+            });
+
             // Protokol kontrolü: Eğer http:// veya https:// yoksa, varsayılan olarak http:// ekle
             if (!host.startsWith("http://") && !host.startsWith("https://")) {
                 host = `http://${host}`;
+                logger.info("Protocol added to host", { originalHost: seller.ip_address, newHost: host });
             }
 
             // Port kontrolü: Varsayılan portları (80, 443) atla
@@ -49,11 +57,24 @@ export class PiqSoftApiService {
                 // HTTPS için 443, HTTP için 80 varsayılan portlardır, eklemeye gerek yok
                 if ((isHttps && seller.port !== 443) || (isHttp && seller.port !== 80)) {
                     port = `:${seller.port}`;
+                } else {
+                    logger.info("Default port skipped", {
+                        protocol: isHttps ? "https" : "http",
+                        port: seller.port,
+                    });
                 }
             }
 
             const baseUrl = `${host}${port}`;
             const url = `${baseUrl}/api/fuma/customer/upsert`;
+
+            logger.info("Making API request", {
+                url,
+                sellerId,
+                messageId,
+                retryCount,
+                hasApiKey: !!seller.api_key,
+            });
 
             const response = await axios.post(url, customerData, {
                 headers: {
@@ -124,9 +145,17 @@ export class PiqSoftApiService {
             const seller = rows[0];
             let host = seller.ip_address;
 
+            logger.info("Building URL for doc offers upsert", {
+                sellerId,
+                originalIpAddress: seller.ip_address,
+                originalPort: seller.port,
+                messageId,
+            });
+
             // Protokol kontrolü: Eğer http:// veya https:// yoksa, varsayılan olarak http:// ekle
             if (!host.startsWith("http://") && !host.startsWith("https://")) {
                 host = `http://${host}`;
+                logger.info("Protocol added to host", { originalHost: seller.ip_address, newHost: host });
             }
 
             // Port kontrolü: Varsayılan portları (80, 443) atla
@@ -137,11 +166,24 @@ export class PiqSoftApiService {
                 // HTTPS için 443, HTTP için 80 varsayılan portlardır, eklemeye gerek yok
                 if ((isHttps && seller.port !== 443) || (isHttp && seller.port !== 80)) {
                     port = `:${seller.port}`;
+                } else {
+                    logger.info("Default port skipped", {
+                        protocol: isHttps ? "https" : "http",
+                        port: seller.port,
+                    });
                 }
             }
 
             const baseUrl = `${host}${port}`;
             const url = `${baseUrl}/api/fuma/doc-orders/upsert`;
+
+            logger.info("Making API request", {
+                url,
+                sellerId,
+                messageId,
+                retryCount,
+                hasApiKey: !!seller.api_key,
+            });
 
             const response = await axios.post(url, docOffersData, {
                 headers: {
