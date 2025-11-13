@@ -10,6 +10,7 @@ export class PiqSoftApiService {
     async upsertCustomer(customerData: any, messageId: string, retryCount: number = 0): Promise<void> {
         let errorMessage = "";
         let responseMessage = "";
+        let url = "";
         try {
             const sellerId = customerData.seller_id;
             if (!sellerId) {
@@ -66,7 +67,7 @@ export class PiqSoftApiService {
             }
 
             const baseUrl = `${host}${port}`;
-            const url = `${baseUrl}/api/fuma/customer/upsert`;
+            url = `${baseUrl}/api/fuma/customer/upsert`;
 
             logger.info("Making API request", {
                 url,
@@ -100,8 +101,10 @@ export class PiqSoftApiService {
                 sellerId: customerData.seller_id,
                 guid: customerData.guid,
                 error: errorDetails.statusCode,
+                errorMessage: errorDetails.message,
                 messageId,
                 retryCount,
+                url: url || "URL not available",
             });
 
             throw error;
@@ -119,6 +122,7 @@ export class PiqSoftApiService {
     async upsertDocOffers(docOffersData: any, messageId: string, retryCount: number = 0): Promise<void> {
         let errorMessage = "";
         let responseMessage = "";
+        let url = "";
         try {
             const sellerId = docOffersData.seller_id;
             if (!sellerId) {
@@ -175,7 +179,7 @@ export class PiqSoftApiService {
             }
 
             const baseUrl = `${host}${port}`;
-            const url = `${baseUrl}/api/fuma/doc-orders/upsert`;
+            url = `${baseUrl}/api/fuma/doc-orders/upsert`;
 
             logger.info("Making API request", {
                 url,
@@ -209,8 +213,10 @@ export class PiqSoftApiService {
                 sellerId: docOffersData.seller_id,
                 guid: docOffersData.guid,
                 error: errorDetails.statusCode,
+                errorMessage: errorDetails.message,
                 messageId,
                 retryCount,
+                url: url || "URL not available",
             });
 
             throw error;
