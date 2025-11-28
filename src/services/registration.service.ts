@@ -20,7 +20,7 @@ export class RegistrationService {
                     await this.docOrdersUpsert(data, messageId, retryCount);
                     break;
                 }
-                case "upsert-doc-invoice": {
+                case "upsert-doc-invoices": {
                     await this.docInvoiceUpsert(data, messageId, retryCount);
                     break;
                 }
