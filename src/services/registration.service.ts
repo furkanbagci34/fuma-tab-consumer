@@ -16,8 +16,12 @@ export class RegistrationService {
                     await this.customerUpsert(data, messageId, retryCount);
                     break;
                 }
-                case "upsert-doc-offers": {
-                    await this.docOffersUpsert(data, messageId, retryCount);
+                case "upsert-doc-orders": {
+                    await this.docOrdersUpsert(data, messageId, retryCount);
+                    break;
+                }
+                case "upsert-doc-invoice": {
+                    await this.docInvoiceUpsert(data, messageId, retryCount);
                     break;
                 }
                 default: {
@@ -36,7 +40,11 @@ export class RegistrationService {
         await this.piqsoftApiService.upsertCustomer(customerData, messageId, retryCount);
     }
 
-    private async docOffersUpsert(docOffersData: any, messageId: string, retryCount: number = 0): Promise<void> {
-        await this.piqsoftApiService.upsertDocOffers(docOffersData, messageId, retryCount);
+    private async docOrdersUpsert(docOrdersData: any, messageId: string, retryCount: number = 0): Promise<void> {
+        await this.piqsoftApiService.upsertDocOrders(docOrdersData, messageId, retryCount);
+    }
+
+    private async docInvoiceUpsert(docInvoiceData: any, messageId: string, retryCount: number = 0): Promise<void> {
+        await this.piqsoftApiService.upsertDocInvoice(docInvoiceData, messageId, retryCount);
     }
 }
