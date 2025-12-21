@@ -73,9 +73,10 @@ export class PiqSoftApiService {
                 throw new Error(errorMessage);
             }
 
-            const sellerResult = await this.dbService.query("SELECT * FROM sellers WHERE id = $1 AND active = true", [
-                sellerId,
-            ]);
+            const sellerResult = await this.dbService.query(
+                "SELECT * FROM sellers WHERE id = $1 AND is_active = true",
+                [sellerId],
+            );
             if (!sellerResult.rows || sellerResult.rows.length === 0) {
                 errorMessage = `Seller with id ${sellerId} not found or inactive`;
                 throw new Error(errorMessage);
