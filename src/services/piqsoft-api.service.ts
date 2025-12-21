@@ -57,7 +57,7 @@ export class PiqSoftApiService {
             throw error;
         } finally {
             await this.dbService.query(
-                "INSERT INTO transfer_logs (title, request, transaction_id, error_message, response_message, created_at) VALUES ($1, $2, $3, $4, $5, NOW())",
+                "INSERT INTO transfer_log (title, request, transaction_id, error_message, response_message, created_at) VALUES ($1, $2, $3, $4, $5, NOW())",
                 [customerData.eventType, JSON.stringify(customerData), messageId, errorMessage, responseMessage],
             );
         }
@@ -110,7 +110,7 @@ export class PiqSoftApiService {
             throw error;
         } finally {
             await this.dbService.query(
-                "INSERT INTO transfer_logs (title, request, transaction_id, error_message, response_message, created_at) VALUES ($1, $2, $3, $4, $5, NOW())",
+                "INSERT INTO transfer_log (title, request, transaction_id, error_message, response_message, created_at) VALUES ($1, $2, $3, $4, $5, NOW())",
                 [docOrdersData.eventType, JSON.stringify(docOrdersData), messageId, errorMessage, responseMessage],
             );
         }
@@ -163,7 +163,7 @@ export class PiqSoftApiService {
             throw error;
         } finally {
             await this.dbService.query(
-                "INSERT INTO transfer_logs (title, request, transaction_id, error_message, response_message, created_at) VALUES ($1, $2, $3, $4, $5, NOW())",
+                "INSERT INTO transfer_log (title, request, transaction_id, error_message, response_message, created_at) VALUES ($1, $2, $3, $4, $5, NOW())",
                 [docInvoiceData.eventType, JSON.stringify(docInvoiceData), messageId, errorMessage, responseMessage],
             );
         }
