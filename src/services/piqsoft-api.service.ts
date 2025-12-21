@@ -32,13 +32,13 @@ export class PiqSoftApiService {
             const url = `${baseUrl}/api/fuma/customer/upsert`;
 
             this.logger.log(
-                `Making API request - url: ${url}, sellerId: ${sellerId}, messageId: ${messageId}, retryCount: ${retryCount}, hasApiKey: ${!!seller.api_key}`,
+                `Making API request - url: ${url}, sellerId: ${sellerId}, messageId: ${messageId}, retryCount: ${retryCount}, hasApiKey: ${!!seller["x-api-key"]}`,
             );
 
             const response = await axios.post(url, customerData, {
                 headers: {
                     "Content-Type": "application/json",
-                    "x-api-key": `${seller.x_api_key}`,
+                    "x-api-key": `${seller["x-api-key"]}`,
                 },
                 timeout: parseInt(process.env.PIQSOFT_TIMEOUT || "30000", 10),
             });
@@ -92,7 +92,7 @@ export class PiqSoftApiService {
             const response = await axios.post(url, docOrdersData, {
                 headers: {
                     "Content-Type": "application/json",
-                    "x-api-key": `${seller.x_api_key}`,
+                    "x-api-key": `${seller["x-api-key"]}`,
                 },
                 timeout: parseInt(process.env.PIQSOFT_TIMEOUT || "30000", 10),
             });
@@ -146,7 +146,7 @@ export class PiqSoftApiService {
             const response = await axios.post(url, docInvoiceData, {
                 headers: {
                     "Content-Type": "application/json",
-                    "x-api-key": `${seller.x_api_key}`,
+                    "x-api-key": `${seller["x-api-key"]}`,
                 },
                 timeout: parseInt(process.env.PIQSOFT_TIMEOUT || "30000", 10),
             });
