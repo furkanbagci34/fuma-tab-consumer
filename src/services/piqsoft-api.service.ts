@@ -16,9 +16,10 @@ export class PiqSoftApiService {
                 throw new Error(errorMessage);
             }
 
-            const sellerResult = await this.dbService.query("SELECT * FROM sellers WHERE id = $1 AND active = true", [
-                sellerId,
-            ]);
+            const sellerResult = await this.dbService.query(
+                "SELECT * FROM sellers WHERE id = $1 AND is_active = true",
+                [sellerId],
+            );
             if (!sellerResult.rows || sellerResult.rows.length === 0) {
                 errorMessage = `Seller with id ${sellerId} not found or inactive`;
                 throw new Error(errorMessage);
@@ -37,7 +38,7 @@ export class PiqSoftApiService {
             const response = await axios.post(url, customerData, {
                 headers: {
                     "Content-Type": "application/json",
-                    "x-api-key": seller.api_key,
+                    "x-api-key": `${seller.x_api_key}`,
                 },
                 timeout: parseInt(process.env.PIQSOFT_TIMEOUT || "30000", 10),
             });
@@ -91,7 +92,7 @@ export class PiqSoftApiService {
             const response = await axios.post(url, docOrdersData, {
                 headers: {
                     "Content-Type": "application/json",
-                    "x-api-key": seller.api_key,
+                    "x-api-key": `${seller.x_api_key}`,
                 },
                 timeout: parseInt(process.env.PIQSOFT_TIMEOUT || "30000", 10),
             });
@@ -127,9 +128,10 @@ export class PiqSoftApiService {
                 throw new Error(errorMessage);
             }
 
-            const sellerResult = await this.dbService.query("SELECT * FROM sellers WHERE id = $1 AND active = true", [
-                sellerId,
-            ]);
+            const sellerResult = await this.dbService.query(
+                "SELECT * FROM sellers WHERE id = $1 AND is_active = true",
+                [sellerId],
+            );
             if (!sellerResult.rows || sellerResult.rows.length === 0) {
                 errorMessage = `Seller with id ${sellerId} not found or inactive`;
                 throw new Error(errorMessage);
@@ -144,7 +146,7 @@ export class PiqSoftApiService {
             const response = await axios.post(url, docInvoiceData, {
                 headers: {
                     "Content-Type": "application/json",
-                    "x-api-key": seller.api_key,
+                    "x-api-key": `${seller.x_api_key}`,
                 },
                 timeout: parseInt(process.env.PIQSOFT_TIMEOUT || "30000", 10),
             });
