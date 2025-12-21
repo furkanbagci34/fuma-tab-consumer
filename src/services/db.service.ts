@@ -1,14 +1,40 @@
 import { HttpStatus, Injectable, Logger } from "@nestjs/common";
 import { Pool, PoolClient } from "pg";
-import { CustomException } from "../exceptions/custom.exception";
+import { CustomException } from "src/exceptions/custom.exception";
 
 @Injectable()
-export class DbService {
+export default class DbService {
     private readonly pool: Pool;
     private readonly logger = new Logger(DbService.name);
 
+    getPoolStatus() {
+        return {
+            total: this.pool.totalCount,
+            idle: this.pool.idleCount,
+            waiting: this.pool.waitingCount,
+        };
+    }
+
     constructor() {
-        this.pool = new Pool({ connectionString: process.env.SQL_CONNECTION_STRING, max: 50 });
+        this.pool = new Pool({
+            connectionString: process.env.SQL_CONNECTION_STRING,
+            max: 50,
+            idleTimeoutMillis: 30000,
+            connectionTimeoutMillis: 10000,
+            allowExitOnIdle: false,
+        });
+
+        // Log pool errors
+        this.pool.on("error", (err) => {
+            this.logger.error(`[Pool Error] Unexpected database error: ${err}`);
+        });
+
+        // Monitor connection pool
+        this.pool.on("connect", () => {
+            this.logger.debug(
+                `[Pool] New client connected. Total: ${this.pool.totalCount}, Idle: ${this.pool.idleCount}, Waiting: ${this.pool.waitingCount}`,
+            );
+        });
     }
 
     async query(sql: string, params: any[] = []) {
@@ -41,6 +67,14 @@ export class DbService {
             await client.query("BEGIN");
         } catch (err) {
             this.logger.error(`[beginTransaction] - ${err}`);
+            // Release client if connection was established but BEGIN failed
+            if (client) {
+                try {
+                    client.release();
+                } catch (releaseErr) {
+                    this.logger.error(`[beginTransaction] - Failed to release client: ${releaseErr}`);
+                }
+            }
             throw new CustomException(HttpStatus.BAD_GATEWAY, err.toString(), false, {});
         }
 
@@ -48,58 +82,30 @@ export class DbService {
     }
 
     async commitTransaction(client: PoolClient) {
-        await client.query("COMMIT");
+        try {
+            await client.query("COMMIT");
+        } catch (err) {
+            this.logger.error(`[commitTransaction] - ${err}`);
+            throw err;
+        }
     }
 
     async rollbackTransaction(client: PoolClient) {
-        await client.query("ROLLBACK");
+        try {
+            await client.query("ROLLBACK");
+        } catch (err) {
+            this.logger.error(`[rollbackTransaction] - ${err}`);
+            // Don't throw, just log - we still want to release the connection
+        }
     }
 
     async closeTransaction(client: PoolClient) {
-        await client.release();
-    }
-
-    async insertTransferLog(params: {
-        title: string;
-        request: any;
-        transactionId: string;
-        errorMessage: string;
-        responseMessage: string;
-    }): Promise<void> {
-        const sql = `
-            INSERT INTO public.transfer_log
-                (title, request, transaction_id, error_message, created_at, response_message)
-            VALUES
-                ($1, $2, $3, $4, now(), $5)
-        `;
-
-        const values = [
-            params.title || "",
-            JSON.stringify(params.request ?? {}),
-            params.transactionId || "",
-            params.errorMessage || "",
-            params.responseMessage || "",
-        ];
-
-        await this.query(sql, values);
-    }
-
-    async fetchSellerRowById(sellerId: number) {
-        const sql = `
-            SELECT
-                id, 
-                "name", 
-                vkn, 
-                created_at, 
-                updated_at, 
-                is_active, 
-                ip_address, 
-                port, 
-                "x-api-key" as api_key
-            FROM public.sellers
-            WHERE id = $1 AND is_active = true
-        `;
-        const result = await this.query(sql, [sellerId]);
-        return result.rows;
+        if (client) {
+            try {
+                await client.release();
+            } catch (err) {
+                this.logger.error(`[closeTransaction] - Failed to release client: ${err}`);
+            }
+        }
     }
 }

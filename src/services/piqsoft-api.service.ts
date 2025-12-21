@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import axios from "axios";
-import { DbService } from "./db.service";
+import DbService from "./db.service";
 @Injectable()
 export class PiqSoftApiService {
     private readonly logger = new Logger(PiqSoftApiService.name);
@@ -16,13 +16,15 @@ export class PiqSoftApiService {
                 throw new Error(errorMessage);
             }
 
-            const rows = await this.dbService.fetchSellerRowById(sellerId);
-            if (!rows || rows.length === 0) {
+            const sellerResult = await this.dbService.query("SELECT * FROM sellers WHERE id = $1 AND active = true", [
+                sellerId,
+            ]);
+            if (!sellerResult.rows || sellerResult.rows.length === 0) {
                 errorMessage = `Seller with id ${sellerId} not found or inactive`;
                 throw new Error(errorMessage);
             }
 
-            const seller = rows[0];
+            const seller = sellerResult.rows[0];
             const host = seller.ip_address;
             const port = seller.port ? `:${seller.port}` : "";
             const baseUrl = `${host}${port}`;
@@ -54,13 +56,10 @@ export class PiqSoftApiService {
 
             throw error;
         } finally {
-            await this.dbService.insertTransferLog({
-                title: customerData.eventType,
-                request: customerData,
-                transactionId: messageId,
-                errorMessage: errorMessage,
-                responseMessage: responseMessage,
-            });
+            await this.dbService.query(
+                "INSERT INTO transfer_logs (title, request, transaction_id, error_message, response_message, created_at) VALUES ($1, $2, $3, $4, $5, NOW())",
+                [customerData.eventType, JSON.stringify(customerData), messageId, errorMessage, responseMessage],
+            );
         }
     }
 
@@ -74,13 +73,15 @@ export class PiqSoftApiService {
                 throw new Error(errorMessage);
             }
 
-            const rows = await this.dbService.fetchSellerRowById(sellerId);
-            if (!rows || rows.length === 0) {
+            const sellerResult = await this.dbService.query("SELECT * FROM sellers WHERE id = $1 AND active = true", [
+                sellerId,
+            ]);
+            if (!sellerResult.rows || sellerResult.rows.length === 0) {
                 errorMessage = `Seller with id ${sellerId} not found or inactive`;
                 throw new Error(errorMessage);
             }
 
-            const seller = rows[0];
+            const seller = sellerResult.rows[0];
             const host = seller.ip_address;
             const port = seller.port ? `:${seller.port}` : "";
             const baseUrl = `${host}${port}`;
@@ -108,13 +109,10 @@ export class PiqSoftApiService {
 
             throw error;
         } finally {
-            await this.dbService.insertTransferLog({
-                title: docOrdersData.eventType,
-                request: docOrdersData,
-                transactionId: messageId,
-                errorMessage: errorMessage,
-                responseMessage: responseMessage,
-            });
+            await this.dbService.query(
+                "INSERT INTO transfer_logs (title, request, transaction_id, error_message, response_message, created_at) VALUES ($1, $2, $3, $4, $5, NOW())",
+                [docOrdersData.eventType, JSON.stringify(docOrdersData), messageId, errorMessage, responseMessage],
+            );
         }
     }
 
@@ -128,13 +126,15 @@ export class PiqSoftApiService {
                 throw new Error(errorMessage);
             }
 
-            const rows = await this.dbService.fetchSellerRowById(sellerId);
-            if (!rows || rows.length === 0) {
+            const sellerResult = await this.dbService.query("SELECT * FROM sellers WHERE id = $1 AND active = true", [
+                sellerId,
+            ]);
+            if (!sellerResult.rows || sellerResult.rows.length === 0) {
                 errorMessage = `Seller with id ${sellerId} not found or inactive`;
                 throw new Error(errorMessage);
             }
 
-            const seller = rows[0];
+            const seller = sellerResult.rows[0];
             const host = seller.ip_address;
             const port = seller.port ? `:${seller.port}` : "";
             const baseUrl = `${host}${port}`;
@@ -162,13 +162,10 @@ export class PiqSoftApiService {
 
             throw error;
         } finally {
-            await this.dbService.insertTransferLog({
-                title: docInvoiceData.eventType,
-                request: docInvoiceData,
-                transactionId: messageId,
-                errorMessage: errorMessage,
-                responseMessage: responseMessage,
-            });
+            await this.dbService.query(
+                "INSERT INTO transfer_logs (title, request, transaction_id, error_message, response_message, created_at) VALUES ($1, $2, $3, $4, $5, NOW())",
+                [docInvoiceData.eventType, JSON.stringify(docInvoiceData), messageId, errorMessage, responseMessage],
+            );
         }
     }
 }
