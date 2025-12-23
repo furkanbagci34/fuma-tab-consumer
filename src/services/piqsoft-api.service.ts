@@ -58,8 +58,15 @@ export class PiqSoftApiService {
             throw error;
         } finally {
             await this.dbService.query(
-                "INSERT INTO transfer_log (title, request, transaction_id, error_message, response_message, created_at, from) VALUES ($1, $2, $3, $4, $5, NOW(), 'FumaConsumer')",
-                [customerData.eventType, JSON.stringify(customerData), messageId, errorMessage, responseMessage],
+                'INSERT INTO transfer_log (title, request, transaction_id, error_message, response_message, created_at, "from") VALUES ($1, $2, $3, $4, $5, NOW(), $6)',
+                [
+                    customerData.eventType,
+                    JSON.stringify(customerData),
+                    messageId,
+                    errorMessage,
+                    responseMessage,
+                    "FumaConsumer",
+                ],
             );
         }
     }
