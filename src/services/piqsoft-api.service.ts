@@ -119,8 +119,15 @@ export class PiqSoftApiService {
             throw error;
         } finally {
             await this.dbService.query(
-                "INSERT INTO transfer_log (title, request, transaction_id, error_message, response_message, created_at) VALUES ($1, $2, $3, $4, $5, NOW())",
-                [docOrdersData.eventType, JSON.stringify(docOrdersData), messageId, errorMessage, responseMessage],
+                'INSERT INTO transfer_log (title, request, transaction_id, error_message, response_message, created_at, "from") VALUES ($1, $2, $3, $4, $5, NOW(), $6)',
+                [
+                    docOrdersData.eventType,
+                    JSON.stringify(docOrdersData),
+                    messageId,
+                    errorMessage,
+                    responseMessage,
+                    "FumaConsumer",
+                ],
             );
         }
     }
@@ -173,8 +180,15 @@ export class PiqSoftApiService {
             throw error;
         } finally {
             await this.dbService.query(
-                "INSERT INTO transfer_log (title, request, transaction_id, error_message, response_message, created_at) VALUES ($1, $2, $3, $4, $5, NOW())",
-                [docInvoiceData.eventType, JSON.stringify(docInvoiceData), messageId, errorMessage, responseMessage],
+                'INSERT INTO transfer_log (title, request, transaction_id, error_message, response_message, created_at, "from") VALUES ($1, $2, $3, $4, $5, NOW(), $6)',
+                [
+                    docInvoiceData.eventType,
+                    JSON.stringify(docInvoiceData),
+                    messageId,
+                    errorMessage,
+                    responseMessage,
+                    "FumaConsumer",
+                ],
             );
         }
     }
