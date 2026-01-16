@@ -18,10 +18,13 @@ export default class DbService {
     constructor() {
         this.pool = new Pool({
             connectionString: process.env.SQL_CONNECTION_STRING,
-            max: 50,
-            idleTimeoutMillis: 30000,
-            connectionTimeoutMillis: 10000,
+            // Keep pool size safely below Postgres max_connections to avoid "too many clients".
+            max: 200,
+            idleTimeoutMillis: 10000,
+            connectionTimeoutMillis: 20000,
             allowExitOnIdle: false,
+            // Recycle clients periodically to prevent long-lived/stuck connections.
+            maxUses: 10000,
         });
 
         // Log pool errors
@@ -32,7 +35,22 @@ export default class DbService {
         // Monitor connection pool
         this.pool.on("connect", () => {
             this.logger.debug(
-                `[Pool] New client connected. Total: ${this.pool.totalCount}, Idle: ${this.pool.idleCount}, Waiting: ${this.pool.waitingCount}`,
+                `[Pool] New client connected. Total: ${this.pool.totalCount}, Idle: ${this.pool.idleCount}, Waiting: ${this.pool.waitingCount}`
+            );
+        });
+        this.pool.on("acquire", () => {
+            this.logger.debug(
+                `[Pool] Client acquired. Total: ${this.pool.totalCount}, Idle: ${this.pool.idleCount}, Waiting: ${this.pool.waitingCount}`
+            );
+        });
+        this.pool.on("release", () => {
+            this.logger.debug(
+                `[Pool] Client released. Total: ${this.pool.totalCount}, Idle: ${this.pool.idleCount}, Waiting: ${this.pool.waitingCount}`
+            );
+        });
+        this.pool.on("remove", () => {
+            this.logger.debug(
+                `[Pool] Client removed. Total: ${this.pool.totalCount}, Idle: ${this.pool.idleCount}, Waiting: ${this.pool.waitingCount}`
             );
         });
     }
