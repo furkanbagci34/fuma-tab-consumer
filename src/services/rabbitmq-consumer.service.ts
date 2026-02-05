@@ -152,14 +152,20 @@ export class RabbitMQConsumerService implements OnModuleInit, OnModuleDestroy {
         channel: ConfirmChannel,
         retryCount: number,
     ): Promise<void> {
+        let vkn = "N/A";
+        try {
+            const parsed = JSON.parse(message.content.toString());
+            vkn = parsed?.data?.vkn || parsed?.vkn || "N/A";
+        } catch {}
+
         this.logger.error(
-            `Message processing failed - messageId: ${messageId}, retryCount: ${retryCount}, error: ${error.message}`,
+            `Message processing failed - messageId: ${messageId}, VKN: ${vkn}, retryCount: ${retryCount}, error: ${error.message}`,
         );
 
         const maxRetryCount = parseInt(process.env.MAX_RETRY_COUNT || "3", 10);
         if (retryCount >= maxRetryCount) {
             this.logger.error(
-                `Max retry attempts reached, message will be rejected - messageId: ${messageId}, retryCount: ${retryCount}, maxRetries: ${maxRetryCount}`,
+                `Max retry attempts reached, message will be rejected - messageId: ${messageId}, VKN: ${vkn}, retryCount: ${retryCount}, maxRetries: ${maxRetryCount}`,
             );
         } else {
             this.logger.log(

@@ -29,8 +29,9 @@ export class RegistrationService {
                 }
             }
         } catch (error) {
+            const vkn = consumerData?.data?.vkn || "N/A";
             this.logger.error(
-                `Failed to process message - error: ${error.message}, messageType: ${consumerData?.eventType}`,
+                `Failed to process message - error: ${error.message}, messageType: ${consumerData?.eventType}, VKN: ${vkn}`,
             );
             throw error;
         }
